@@ -168,6 +168,11 @@ func NewImageFromDir(directory string) (image types.Image, err error) {
 	for i, l := range v1Manifest.Layers {
 		layerFilename := directory + "/" + l.Digest.Encoded()
 		logrus.Infof("Adding tar file '%s' as image layer", layerFilename)
+		
+		if i >= len(v1ImageConfig.RootFS.DiffIDs) {
+			return image, errors.New("mismatch between number of layers and DiffIDs")
+		}
+		
 		layer := types.Layer{
 			LayerPath: layerFilename,
 			Digest:    l.Digest.String(),
@@ -222,6 +227,11 @@ func NewImageFromManifest(manifestFilename string, blobMapFilename string) (imag
 	for i, l := range v1Manifest.Layers {
 		layerFilename := blobMap[l.Digest.Encoded()]
 		logrus.Infof("Adding tar file '%s' as image layer", layerFilename)
+		
+		if i >= len(v1ImageConfig.RootFS.DiffIDs) {
+			return image, errors.New("mismatch between number of layers and DiffIDs")
+		}
+		
 		layer := types.Layer{
 			LayerPath: layerFilename,
 			Digest:    l.Digest.String(),
@@ -249,14 +259,18 @@ func MergeOtherImageConfig(target *v1.ImageConfig, other *v1.ImageConfig) {
 	}
 
 	// ExposedPorts: join
+	if target.ExposedPorts == nil {
+		target.ExposedPorts = make(map[string]struct{})
+	}
 	for k, v := range other.ExposedPorts {
 		target.ExposedPorts[k] = v
 	}
 
 	// Env: join
-	for k, v := range other.Env {
-		target.Env[k] = v
+	if target.Env == nil {
+		target.Env = make([]string, 0)
 	}
+	target.Env = append(target.Env, other.Env...)
 
 	// Entrypoint: overwrite
 	if len(other.Entrypoint) > 0 {
@@ -269,6 +283,9 @@ func MergeOtherImageConfig(target *v1.ImageConfig, other *v1.ImageConfig) {
 	}
 
 	// Volumes: join
+	if target.Volumes == nil {
+		target.Volumes = make(map[string]struct{})
+	}
 	for k, v := range other.Volumes {
 		target.Volumes[k] = v
 	}
@@ -279,6 +296,9 @@ func MergeOtherImageConfig(target *v1.ImageConfig, other *v1.ImageConfig) {
 	}
 
 	// Labels: join
+	if target.Labels == nil {
+		target.Labels = make(map[string]string)
+	}
 	for k, v := range other.Labels {
 		target.Labels[k] = v
 	}
