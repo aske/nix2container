@@ -397,6 +397,8 @@ let
     fromImage ? "",
     # Image architecture
     arch ? pkgs.go.GOARCH,
+    # Whether the base image's configuration (entrypoint, env, ...) should be inherited
+    fromImageInheritConfig ? false,
     # A list of file permisssions which are set when the tar layer is
     # created: these permissions are not written to the Nix store.
     #
@@ -475,6 +477,7 @@ let
       };
       fromImageFlag = l.optionalString (fromImage != "") "--from-image ${fromImage}";
       archFlag = "--arch ${arch}";
+      fromImageInheritConfigFlag = l.optionalString fromImageInheritConfig "--from-image-inherit-config=true";
       createdFlag = "--created ${created}";
       layerPaths = l.concatMapStringsSep " " (l: l + "/layers.json") (layers ++ [customizationLayer]);
       image = let
@@ -505,6 +508,7 @@ let
         $out \
         ${fromImageFlag} \
         ${archFlag} \
+        ${fromImageInheritConfigFlag} \
         ${createdFlag} \
         ${configFile} \
         ${layerPaths}
